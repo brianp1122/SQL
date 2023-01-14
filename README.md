@@ -1,6 +1,10 @@
 # SQL
 Projects and Assignments that I've completed with a specific focus on using SQL
 
+RESTAURANT_BUSINESS_ONLINE Top250, Future50, and Independent100
+This dataset is in regard to Restaurant Business Rankings from 2020. It takes a look into the business 
+results from 2020 with a focus on how the COVID-19 pandemic impacted restaurant's business results for the entire year. 
+
 DSS 630 FINAL PROJECT
 This work is related to a final project for my Masters of Business Intelligence and Analytics coursework. I was asked to create the database framework for an imaginary website called "Snubhub" where people can buy and sell event tickets on the resale market. I was tasked with identfying functional dependencies, normalizing the data, creating an ER Diagram, and finally writing the SQL code to build the database. 
 
