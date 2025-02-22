@@ -1,0 +1,195 @@
+/* Healthcare Project
+This is a SQL project using example data created by ChatGPT to demonstrate the relationships between different tables of data and how
+they can interact with each other to uncover meaningful analytic insights. This project involves healthcare data with 4 different tables: 
+1. Patients
+2. Appointments
+3. Doctors
+4. Insurance Providers
+
+There are 4 different questions we will look to answer:
+
+1. Which insurance providers have the highest total insurance payouts for primary care visits?
+2. Which doctors generate the highest revenue from patient visits?
+3. What percentage of appointments required a follow-up, and which doctors have the highest follow up rate?
+4. How does smoking status correlate with appointment frequency?   */
+
+
+/*  Step 1: Create Database 
+In MySQL Command Client- CREATE DATABASE healthcare_project;   */
+
+-- Step 2: Create Tables within Database
+
+CREATE TABLE Patients (
+PatientID INT NOT NULL,
+FirstName VARCHAR (50) NOT NULL, 
+LastName VARCHAR (50) NOT NULL,
+DOB DATE NOT NULL,
+Gender VARCHAR (10) NOT NULL,
+PrimaryDoctorID INT,
+InsuranceProviderID INT,
+SmokingStatus VARCHAR (20),
+Allergies VARCHAR (50),
+PRIMARY KEY (PatientID)
+);
+
+-- Right click Patients table under Schemas on the left and use Table Data Import Wizard to import data from CSV file.
+
+
+SELECT *
+FROM Patients;
+
+-- Create the remaining tables 
+
+CREATE TABLE Appointments (
+AppointmentID INT NOT NULL,
+PatientID INT NOT NULL,
+DoctorID INT NOT NULL,
+AppointmentDate DATE NOT NULL,
+ReasonForVisit VARCHAR (100) NOT NULL,
+Diagnosis VARCHAR (100),
+FollowUpRequired VARCHAR (10),
+CopayAmount DECIMAL (10,2),
+InsuranceBilledAmount DECIMAL (10,2),
+PRIMARY KEY (AppointmentID),
+FOREIGN KEY (PatientID) REFERENCES Patients(PatientID)
+);
+
+CREATE TABLE Doctors (
+DoctorID INT NOT NULL,
+FirstName VARCHAR (50) NOT NULL,
+LastName VARCHAR (50) NOT NULL,
+Specialty VARCHAR (50) NOT NULL,
+ClinicLocation VARCHAR (50) NOT NULL,
+PhoneNumber VARCHAR (12) NOT NULL,
+Email VARCHAR (50) NOT NULL
+);
+
+CREATE TABLE InsuranceProvider (
+InsuranceProviderID INT NOT NULL,
+ProviderName VARCHAR (50) NOT NULL,
+PlanType VARCHAR (20),
+CoveragePercentage DECIMAL (10,3),
+DeductibleAmount DECIMAL (10,2),
+OutOFPocketMax DECIMAL (10,2)
+);
+
+
+-- 1. Which insurance providers have the highest total insurance payouts for primary care visits?
+-- need: insurance provider.provider name, appointment.reason for visit, 
+
+SELECT insuranceprovider.ProviderName, 
+sum(appointments.InsuranceBilledAmount) as Billed_Amount
+FROM patients
+INNER JOIN appointments
+ON
+patients.PatientID = appointments.PatientID
+INNER JOIN insuranceprovider
+ON
+patients.InsuranceProviderID = insuranceprovider.InsuranceProviderID
+WHERE appointments.ReasonForVisit = 'Annual Checkup'
+GROUP BY insuranceprovider.ProviderName
+ORDER BY Billed_Amount DESC;
+
+SELECT * FROM appointments;
+
+/* In this example, I needed to take the sum of the insurance billed amount for each of the providers 
+as it relates to primary care visits and see who paid out the highest amount. I needed to join the patients tables 
+to appointments to link up each patient to each of their appointments, and then link patients to
+the Insurance Provider table to get the name of the provider. I also needed to take the sum of insurancebilledamount
+and group by the provider name so we can confirm which provider paid out the highest amount. The result was that 
+Williams LLC paid out the highest at 1220.69   */ 
+
+
+-- 2. Which doctors generate the highest revenue from patient visits?
+-- need: doctor first and last name, patient id from paitent , 
+-- join doctor id from appointment table to doctor table
+
+SELECT 
+doctors.DoctorID, 
+doctors.FirstName, 
+doctors.LastName, 
+COUNT(appointments.AppointmentID) as Number_of_Appointments,
+SUM(appointments.CopayAmount) as CoPay_Revenue, 
+SUM(appointments.InsuranceBilledAmount) as Insurance_Revenue, 
+(sum(appointments.CopayAmount) + sum(appointments.InsuranceBilledAmount)) as Total
+FROM doctors
+INNER JOIN appointments
+ON
+doctors.DoctorID = appointments.DoctorID
+GROUP BY doctors.DoctorID, doctors.FirstName, doctors.LastName
+ORDER BY Total DESC;
+
+/* In this query, I needed to find the doctor with the highest revenue from patient visits. I 
+did this by taking the sum of copay revenue and insurance revenue, calculating a total between the two,
+and linking the doctors to their total appointments with GROUP BY. I found that Dr. Tara Allen had
+the highest revenue at 3493.21, but also had the highest number of appointments at 10.  */
+
+
+-- 3. What percentage of appointments required a follow-up, and which doctors have the highest follow up rate?
+-- need: COUNT of Followuprequired from appointments WHERE = True DIVIDED BY  COUNT of Followuprequired from appointments 
+
+SELECT appointments.DoctorID, 
+doctors.FirstName, 
+doctors.LastName, 
+SUM(CASE 
+	WHEN appointments.FollowUpRequired = "TRUE" THEN 1
+    ELSE 0
+    END) as Count_of_True,
+COUNT(appointments.FollowUpRequired) as Total_Follow_Ups, 
+ ROUND(SUM(CASE 
+	WHEN appointments.FollowUpRequired = "TRUE" THEN 1
+    ELSE 0
+    END) / COUNT(appointments.FollowUpRequired),2) as Percentage_of_Required_Followups    
+FROM appointments
+INNER JOIN doctors
+ON
+appointments.DoctorID = doctors.DoctorID
+GROUP BY appointments.DoctorID, doctors.FirstName, doctors.LastName
+ORDER BY Percentage_of_Required_Followups DESC;
+
+/*  For this question I needed to find the count of TRUE responses in the FollowUpRequired column
+from the appointments table and divide by the total count in FollowUpRequired. I also needed to do this
+from the SELECT statement so that the answer would be returned as a new column. I decided to use a 
+CASE WHEN statement to create a new column for the count of true and then divide that by Total_Follow_Ups to
+get the percentage of required follow ups. I also included the doctor ID, first and last name by using an
+inner join between appointments and doctors. The result was William Moore had 100% follow ups followed by
+Tom Smith at 83%, Derek Smith at 75%, and Anthony Gilmore at 75%.  */
+     
+
+-- 4. How does smoking status correlate with appointment frequency?
+
+select * from patients;
+
+SELECT patients.FirstName, 
+patients.LastName, 
+patients.SmokingStatus, 
+COUNT( appointments.AppointmentDate) as Number_of_Appointments
+FROM patients
+INNER JOIN appointments
+ON patients.PatientID = appointments.PatientID
+GROUP BY patients.FirstName, patients.LastName, patients.SmokingStatus
+ORDER BY Number_of_Appointments DESC;
+
+SELECT patients.SmokingStatus,
+COUNT( appointments.AppointmentDate) as Number_of_Appointments
+FROM patients
+INNER JOIN appointments
+ON patients.PatientID = appointments.PatientID
+GROUP BY patients.SmokingStatus;
+
+/* For this last question, I ran two queries to investigate the relationship between smoking and number
+of appointments. The first query was specifically by patient and unfortunately, I didn't find anything meaningful. 
+The top patients were a complete mix of smoker and non-smoker and the maximum number of visits was 4. In the second 
+query, I took the sum of appointments between smoker, non-smoker, and former smoker and still didn't find much to go on. 
+The total for former-smoker was 26, non-smoker was 37, and current smoker was 37. With this knowledge, I would suggest that 
+we need either more data or more specific information to make a meaningful insight. */ 
+
+
+-- Bonus: Create a list of appointments providing PatientID, First and Last Name, Apt ID, Apt Date, and reason for the visit. 
+
+SELECT Patients.PatientID, Patients.FirstName, Patients.LastName, Appointments.AppointmentID, Appointments.AppointmentDate, Appointments.ReasonForVisit
+FROM Appointments
+INNER JOIN Patients
+ON
+Patients.PatientID = Appointments.PatientID
+ORDER BY AppointmentDate ASC;
