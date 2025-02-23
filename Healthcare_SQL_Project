@@ -1,5 +1,5 @@
 /* Healthcare Project
-This is a SQL project using example data created by ChatGPT to demonstrate the relationships between different tables of data and how
+This is a SQL project using sample healthcare data to demonstrate the relationships between different tables of data and how
 they can interact with each other to uncover meaningful analytic insights. This project involves healthcare data with 4 different tables: 
 1. Patients
 2. Appointments
